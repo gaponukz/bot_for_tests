@@ -20,13 +20,16 @@ class AutomaticTest(Bot):
         self.driver.find_element_by_xpath('/html/body/nav/div/div/div/div[4]/a').click()
         self.driver.find_element_by_xpath(f'/html/body/section[2]/div/div/div[{index}]/div/div[2]/a').click()
         sleep(random.choice([.5, .4]))
-        self.driver.find_element_by_css_selector('body > section.course-detail-page > div > div.course-rules-page__btns > a.btn.btn-blue-transparent.course-rules-page__btn').click()
-
+        try:
+            self.driver.find_element_by_css_selector('body > section.course-detail-page > div > div.course-rules-page__btns > a.btn.btn-blue-transparent.course-rules-page__btn').click()
+        except:
+            print('Тест уже решен.'); return
+        
         answers = parse_answers(self.driver.page_source)
         html = BeautifulSoup(self.driver.page_source, 'html.parser')
         
         if not html.find('div', {'class': 'test__info-value'}).text == '3':
-            return
+            print('Тест уже решен.'); return
         
         tests = html.find_all('div', {'class': 'test-item'})
         data = []
@@ -68,6 +71,12 @@ def solve_test(index: int, username: str, password: str) -> None:
     bot.solve(index)
     bot.close()
 
+def generate():
+    i = 0
+    while True:
+        yield i, i + 1, i + 2
+        i += 3
+
 if __name__ == '__main__':
     wb = xlrd.open_workbook(easygui.fileopenbox())
     sheet, row = wb.sheet_by_index(0), 1
@@ -95,25 +104,26 @@ if __name__ == '__main__':
                 index += 1
             except:
                 break
-
-    for i in range(len(users)):
+    
+    generator = generate()
+    tests_solved = 0
+    while True:
         try:
-            tread1 = Thread(target = solve_tests, args = (users[i][0], users[0][1]))
-            try:
-                tread2 = Thread(target = solve_tests, args = (users[i + 1][0], users[1][1]))
-            except:
-                tread2 = Thread(target = lambda: None)
-            try:
-                tread3 = Thread(target = solve_tests, args = (users[i + 2][0], users[2][1]))
-            except:
-                try:
-                    tread3 = Thread(target = solve_tests, args = (users[i + 1][0], users[2][1]))
-                except:
-                    tread3 = Thread(target = lambda: None)
+            one, two, three = generator.__next__()
+
+            tread1 = Thread(target = solve_tests, args = (users[one][0], users[one][1]))
+            tread2 = Thread(target = solve_tests, args = (users[two][0], users[two][1]))
+            tread3 = Thread(target = solve_tests, args = (users[three][0], users[three][1]))
             
             tread1.start(); tread2.start(); tread3.start()
-            tread1.join(); tread2.join(); tread3.join()
+            tread3.join()
 
-            print(f'{i + 1}/{len(users)} аккаунтов прошло тесты.')
+            tests_solved += 3
+            
+            print(f'{tests_solved}/{len(users)} аккаунтов прошло тесты.')
+        
+        except IndexError:
+            break
+
         except:
             continue
