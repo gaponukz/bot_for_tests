@@ -1,12 +1,12 @@
 try:
     from os import system
-    from time import sleep
     from bot import ParseAnswers as Bot
     from utils import parse_answers
     from selenium import webdriver
     from bs4 import BeautifulSoup
     from threading import Thread
-    import json, random
+    from datetime import datetime
+    import json, random, time
     import xlrd, xlsxwriter
     import easygui
 
@@ -19,17 +19,19 @@ class AutomaticTest(Bot):
         self.driver.implicitly_wait(1)
         self.driver.find_element_by_xpath('/html/body/nav/div/div/div/div[4]/a').click()
         self.driver.find_element_by_xpath(f'/html/body/section[2]/div/div/div[{index}]/div/div[2]/a').click()
-        sleep(random.choice([.5, .4]))
+        time.sleep(random.choice([.5, .4]))
         try:
             self.driver.find_element_by_css_selector('body > section.course-detail-page > div > div.course-rules-page__btns > a.btn.btn-blue-transparent.course-rules-page__btn').click()
         except:
-            print('Тест уже решен.'); return
+            # print('Тест уже решен.')
+            return
         
         answers = parse_answers(self.driver.page_source)
         html = BeautifulSoup(self.driver.page_source, 'html.parser')
         
         if not html.find('div', {'class': 'test__info-value'}).text == '3':
-            print('Тест уже решен.'); return
+            # print('Тест уже решен.'); 
+            return
         
         tests = html.find_all('div', {'class': 'test-item'})
         data = []
@@ -57,9 +59,9 @@ class AutomaticTest(Bot):
             result_element = self.driver.find_element_by_css_selector(f"#app-quiz > div > div.test__list > div:nth-child({index_of_test}) > div.test-item__answers > div > div:nth-child({index_of_correct}) > label > span")
             self.driver.execute_script("arguments[0].click()", result_element)
 
-            sleep(random.choice([.1, .2, .3]))
+            time.sleep(random.choice([.1, .2, .3]))
         
-        sleep(random.choice([2, 2.5, 3]))
+        time.sleep(random.choice([2, 2.5, 3]))
     
     @staticmethod
     def clean(text: str) -> str:
@@ -80,50 +82,47 @@ def generate():
 if __name__ == '__main__':
     wb = xlrd.open_workbook(easygui.fileopenbox())
     sheet, row = wb.sheet_by_index(0), 1
-    users = []
+    users, tests_solved = [], 0
+    startTime = datetime.now()
 
     while True:
         try:
-            username = sheet.cell_value(row, 1)
-            password = sheet.cell_value(row, 2)
-            users.append([username, password])
-            row += 1
+            username: str = sheet.cell_value(row, 1)
+            password: str = sheet.cell_value(row, 2)
+            users.append([username, password]); row += 1
         except:
             break
 
     def solve_tests(username: str, password: str):
         index = 1
+        global tests_solved
+
         while True:
             try:
-                solve_test(
-                    index = index,
-                    username = username,
-                    password = password
-                )
-                # print(f'Solve {index} test for {username}')
-                index += 1
+                solve_test(index = index,username = username,password = password)
+                index += 1 # print(f'Solve {index} test for {username}')
+
             except:
                 break
+        tests_solved += 1
     
     generator = generate()
-    tests_solved = 0
+
     while True:
         try:
             one, two, three = generator.__next__()
+            print(f'{tests_solved}/{len(users)} аккаунтов прошло тесты.')
 
             tread1 = Thread(target = solve_tests, args = (users[one][0], users[one][1]))
             tread2 = Thread(target = solve_tests, args = (users[two][0], users[two][1]))
             tread3 = Thread(target = solve_tests, args = (users[three][0], users[three][1]))
             
             tread1.start(); tread2.start(); tread3.start()
-            tread3.join()
-
-            tests_solved += 3
-            
-            print(f'{tests_solved}/{len(users)} аккаунтов прошло тесты.')
+            tread1.join(); tread2.join(); tread3.join()
         
-        except IndexError:
-            break
-
-        except:
-            continue
+        except IndexError: break
+        except: continue
+    
+    # Find out time it took for a python script to complete execution
+    print('Время за которое были выполнены все тесты', end = ' ')
+    print(datetime.now() - startTime)
