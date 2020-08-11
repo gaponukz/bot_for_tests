@@ -11,6 +11,10 @@ class ParseAnswers(object):
     def __init__(self, show = False) -> None:
         options = Options()
         if not show: options.add_argument("--headless")
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--ignore-certificate-errors')
+        options.add_argument('--disable-logging') 
         self.driver = webdriver.Chrome(options = options)
 
     def login(self, username: str, password: str) -> None:
