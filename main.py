@@ -1,5 +1,6 @@
+from os import system
+
 try:
-    from os import system
     from bot import ParseAnswers as Bot
     from utils import parse_answers
     from selenium import webdriver
