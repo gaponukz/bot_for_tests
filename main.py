@@ -25,8 +25,15 @@ class AutomaticTest(Bot):
         except:
             # print('Тест уже решен.')
             return
+
+        time_to_refresh = 0
+        while (answers := parse_answers(self.driver.page_source)['data']) == []:
+            self.driver.refresh()
+            if time_to_refresh == 3:
+                return
+            
+            time_to_refresh = time_to_refresh + 1
         
-        answers = parse_answers(self.driver.page_source)
         html = BeautifulSoup(self.driver.page_source, 'html.parser')
         
         if not html.find('div', {'class': 'test__info-value'}).text == '3':
@@ -67,12 +74,6 @@ class AutomaticTest(Bot):
     def clean(text: str) -> str:
         return text.replace('\t', ' ').replace('\n', ' ').strip()
 
-def solve_test(index: int, username: str, password: str) -> None:
-    bot = AutomaticTest(show = False)
-    bot.login(username, password)
-    bot.solve(index)
-    bot.close()
-
 def generate():
     i = 0
     while True:
@@ -94,16 +95,18 @@ if __name__ == '__main__':
             break
 
     def solve_tests(username: str, password: str):
-        index = 1
+        bot, index = AutomaticTest(show = False), 1
+        bot.login(username, password)
         global tests_solved
 
         while True:
             try:
-                solve_test(index = index,username = username,password = password)
+                bot.solve(index)
                 index += 1 # print(f'Solve {index} test for {username}')
 
-            except:
-                break
+            except: break
+
+        bot.close()
         tests_solved += 1
     
     generator = generate()
@@ -111,7 +114,6 @@ if __name__ == '__main__':
     while True:
         try:
             one, two, three = generator.__next__()
-            print(f'{tests_solved}/{len(users)} аккаунтов прошло тесты.')
 
             tread1 = Thread(target = solve_tests, args = (users[one][0], users[one][1]))
             tread2 = Thread(target = solve_tests, args = (users[two][0], users[two][1]))
@@ -119,6 +121,9 @@ if __name__ == '__main__':
             
             tread1.start(); tread2.start(); tread3.start()
             tread1.join(); tread2.join(); tread3.join()
+
+            system('cls')
+            print(f'{tests_solved}/{len(users)} аккаунтов прошло тесты.')
         
         except IndexError: break
         except: continue
