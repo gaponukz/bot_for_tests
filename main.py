@@ -24,8 +24,7 @@ class AutomaticTest(Bot):
         try:
             self.driver.find_element_by_css_selector('body > section.course-detail-page > div > div.course-rules-page__btns > a.btn.btn-blue-transparent.course-rules-page__btn').click()
         except:
-            # print('Тест уже решен.')
-            return
+            return print('Тест уже решен.')
 
         time_to_refresh = 0
         while (answers := parse_answers(self.driver.page_source)['data']) == []:
@@ -38,36 +37,10 @@ class AutomaticTest(Bot):
         html = BeautifulSoup(self.driver.page_source, 'html.parser')
         
         if not html.find('div', {'class': 'test__info-value'}).text == '3':
-            # print('Тест уже решен.'); 
-            return
+            return # print('Тест уже решен.')
         
-        tests = html.find_all('div', {'class': 'test-item'})
-        data = []
-
-        for test in tests:
-            data.append({
-                'title': test.find('div', {'class': 'test-item__question'}).text,
-                'answers': list(map(lambda x: str(x.text), test.find('div', {'class': 'test-item__answers-row'})\
-                .find_all('div', {'class': 'test-item__answer'})))
-            })
-
-        for test in data:
-            index_of_test = data.index(test) + 1
-            try:
-                self.driver.implicitly_wait(1)
-                answer_tests = list(filter(lambda x: AutomaticTest.clean(x['title']) \
-                    in AutomaticTest.clean(test['title']), answers['data']))[0]
-                answer = list(filter(lambda x: x['is_true_answer'] == 1, answer_tests['answers']))
-            except:
-                element = self.driver.find_element_by_css_selector(f"#app-quiz > div > div.test__list > div:nth-child({index_of_test}) > div.test-item__answers > div > div:nth-child({random.choice([1, 2])}) > label > span")
-                self.driver.execute_script("arguments[0].click()", element)
-
-            index_of_correct = random.choice([1, 2]) if not answer else answer_tests['answers'].index(answer[0]) + 1
-
-            result_element = self.driver.find_element_by_css_selector(f"#app-quiz > div > div.test__list > div:nth-child({index_of_test}) > div.test-item__answers > div > div:nth-child({index_of_correct}) > label > span")
-            self.driver.execute_script("arguments[0].click()", result_element)
-
-            time.sleep(random.choice([.1, .2, .3]))
+        with open('solve_tests.js', 'r', encoding = 'utf-8') as script:
+            self.driver.execute_script(script.read())
         
         time.sleep(random.choice([2, 2.5, 3]))
     
@@ -92,8 +65,7 @@ if __name__ == '__main__':
             username: str = sheet.cell_value(row, 1)
             password: str = sheet.cell_value(row, 2)
             users.append([username, password]); row += 1
-        except:
-            break
+        except: break
 
     def solve_tests(username: str, password: str):
         bot, index = AutomaticTest(show = False), 1
@@ -123,7 +95,7 @@ if __name__ == '__main__':
             tread1.start(); tread2.start(); tread3.start()
             tread1.join(); tread2.join(); tread3.join()
 
-            system('cls')
+            system('cls || clear')
             print(f'{tests_solved}/{len(users)} аккаунтов прошло тесты.')
         
         except IndexError: break
